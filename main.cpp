@@ -15,14 +15,14 @@ using namespace std;
 #endif
 
 #ifdef _WIN32
-    #include <conio.h> // For Windows-specific input handling
+    #include <conio.h> // For input handling
     #define CLEAR_SCREEN "cls"
 #else
     #include <termios.h>
     #include <unistd.h>
     #define CLEAR_SCREEN "clear"
     
-    int getch() { // Linux/macOS alternative to _getch()
+    int getch() { 
         struct termios oldt, newt;
         int ch;
         tcgetattr(STDIN_FILENO, &oldt);
@@ -131,7 +131,7 @@ private:
 };
 
 TetrisGame::TetrisGame() 
-    : grid(GRID_HEIGHT, std::vector<char>(GRID_WIDTH, ' ')), 
+    : grid(GRID_HEIGHT, vector<char>(GRID_WIDTH, ' ')), 
       score(0), level(1), linesCleared(0), fallSpeed(0.8f), gameOver(false), paused(false), 
       currentPiece(Tetromino(TetrominoType::NONE)) {
     initializeGame();
@@ -153,7 +153,7 @@ void TetrisGame::generateNewPiece() {
     }
 }
 
-bool TetrisGame::checkCollision(const std::vector<Point>& blocks) const {
+bool TetrisGame::checkCollision(const vector<Point>& blocks) const {
     for (const auto& block : blocks) {
         if (block.x < 0 || block.x >= GRID_WIDTH || block.y >= GRID_HEIGHT) {
             return true;
