@@ -7,6 +7,7 @@
 #include <string>
 #include <conio.h>
 
+using namespace std;
 #ifdef _WIN32
     #include <windows.h>
 #else
@@ -43,21 +44,21 @@ struct Point {
 class Tetromino {
 public:
     TetrominoType type;
-    std::vector<Point> blocks;
+    vector<Point> blocks;
     int rotation;
 
     Tetromino(TetrominoType type);
     void rotate();
     void move(int dx, int dy);
-    std::vector<Point> getRotatedShape() const;
-    std::vector<Point> getMovedShape(int dx, int dy) const;
-    std::string getColorCode() const;
+    vector<Point> getRotatedShape() const;
+    vector<Point> getMovedShape(int dx, int dy) const;
+    string getColorCode() const;
 
 private:
-    static const std::vector<std::vector<Point>> baseShapes;
+    static const vector<vector<Point>> baseShapes;
 };
 
-const std::vector<std::vector<Point>> Tetromino::baseShapes = {
+const vector<vector<Point>> Tetromino::baseShapes = {
     {{ {0, 0}, {1, 0}, {2, 0}, {3, 0} }}, // I
     {{ {0, 0}, {1, 0}, {0, 1}, {1, 1} }}, // O
     {{ {0, 0}, {1, 0}, {2, 0}, {1, 1} }}, // T
@@ -74,7 +75,7 @@ Tetromino::Tetromino(TetrominoType type) : type(type), rotation(0) {
 }
 
 void Tetromino::rotate() {
-    std::vector<Point> rotatedBlocks;
+    vector<Point> rotatedBlocks;
     for (const auto& block : blocks) {
         rotatedBlocks.push_back({ -block.y, block.x }); // 90-degree rotation formula
     }
@@ -88,8 +89,8 @@ void Tetromino::move(int dx, int dy) {
     }
 }
 
-std::vector<Point> Tetromino::getMovedShape(int dx, int dy) const {
-    std::vector<Point> movedBlocks;
+vector<Point> Tetromino::getMovedShape(int dx, int dy) const {
+    vector<Point> movedBlocks;
     for (const auto& block : blocks) {
         movedBlocks.push_back({ block.x + dx, block.y + dy });
     }
@@ -101,7 +102,7 @@ public:
     TetrisGame();
     void run();
 private:
-    std::vector<std::vector<char>> grid;
+    vector<vector<char>> grid;
     Tetromino currentPiece;
     int score, level, linesCleared;
     float fallSpeed;
@@ -137,12 +138,12 @@ TetrisGame::TetrisGame()
 }
 
 void TetrisGame::initializeGame() {
-    grid.assign(GRID_HEIGHT, std::vector<char>(GRID_WIDTH, ' '));
+    grid.assign(GRID_HEIGHT, vector<char>(GRID_WIDTH, ' '));
     generateNewPiece();
 }
 
 TetrominoType TetrisGame::getRandomPieceType() {
-    return static_cast<TetrominoType>(std::rand() % 7);
+    return static_cast<TetrominoType>(rand() % 7);
 }
 
 void TetrisGame::generateNewPiece() {
@@ -165,7 +166,7 @@ bool TetrisGame::checkCollision(const std::vector<Point>& blocks) const {
 }
 
 void TetrisGame::run() {
-    std::cout << "Press any key to start...\n";
+    cout << "Press any key to start...\n";
     getch();
 
     while (!gameOver) {
@@ -179,23 +180,23 @@ void TetrisGame::run() {
         #endif
     }
 
-    std::cout << "Game Over! Score: " << score << std::endl;
+    cout << "Game Over! Score: " << score << endl;
 }
 
 void TetrisGame::drawGrid() {
     system(CLEAR_SCREEN);
-    std::cout << "Score: " << score << " Level: " << level << "\n";
+    cout << "Score: " << score << " Level: " << level << "\n";
     for (const auto& row : grid) {
-        std::cout << "|";
+        cout << "|";
         for (char cell : row) {
-            std::cout << (cell == '#' ? "[]" : "  ");
+            cout << (cell == '#' ? "[]" : "  ");
         }
-        std::cout << "|\n";
+        cout << "|\n";
     }
 }
 
 int main() {
-    std::srand(static_cast<unsigned>(std::time(nullptr)));
+    srand(static_cast<unsigned>(time(nullptr)));
     TetrisGame game;
     game.run();
     return 0;
