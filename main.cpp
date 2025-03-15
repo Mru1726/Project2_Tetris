@@ -1,203 +1,605 @@
 #include <iostream>
 #include <vector>
-#include <chrono>
-#include <thread>
-#include <cstdlib>
+#include <conio.h>
+#include <windows.h>
 #include <ctime>
 #include <string>
-#include <conio.h>
 
 using namespace std;
-#ifdef _WIN32
-    #include <windows.h>
-#else
-    #include <unistd.h>
-#endif
+// Constants for game
+const int GRID_WIDTH = 10;
+const int GRID_HEIGHT = 20;
+const int SCREEN_WIDTH = GRID_WIDTH * 2 + 20; // Extra space for score display
+const int SCREEN_HEIGHT = GRID_HEIGHT + 4;    // +4 for borders and instructions
 
-#ifdef _WIN32
-    #include <conio.h> // For input handling
-    #define CLEAR_SCREEN "cls"
-#else
-    #include <termios.h>
-    #include <unistd.h>
-    #define CLEAR_SCREEN "clear"
-    
-    int getch() { 
-        struct termios oldt, newt;
-        int ch;
-        tcgetattr(STDIN_FILENO, &oldt);
-        newt = oldt;
-        newt.c_lflag &= ~(ICANON | ECHO);
-        tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-        ch = getchar();
-        tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-        return ch;
+// Tetromino shapes and their rotations
+const int SHAPES[7][4][4][4] = {
+    // I-Shape (Cyan)
+    {
+        {{0,0,0,0}, {1,1,1,1}, {0,0,0,0}, {0,0,0,0}},
+        {{0,0,1,0}, {0,0,1,0}, {0,0,1,0}, {0,0,1,0}},
+        {{0,0,0,0}, {0,0,0,0}, {1,1,1,1}, {0,0,0,0}},
+        {{0,1,0,0}, {0,1,0,0}, {0,1,0,0}, {0,1,0,0}}
+    },
+    // O-Shape (Yellow)
+    {
+        {{0,0,0,0}, {0,1,1,0}, {0,1,1,0}, {0,0,0,0}},
+        {{0,0,0,0}, {0,1,1,0}, {0,1,1,0}, {0,0,0,0}},
+        {{0,0,0,0}, {0,1,1,0}, {0,1,1,0}, {0,0,0,0}},
+        {{0,0,0,0}, {0,1,1,0}, {0,1,1,0}, {0,0,0,0}}
+    },
+    // T-Shape (Purple)
+    {
+        {{0,0,0,0}, {0,1,0,0}, {1,1,1,0}, {0,0,0,0}},
+        {{0,0,0,0}, {0,1,0,0}, {0,1,1,0}, {0,1,0,0}},
+        {{0,0,0,0}, {0,0,0,0}, {1,1,1,0}, {0,1,0,0}},
+        {{0,0,0,0}, {0,1,0,0}, {1,1,0,0}, {0,1,0,0}}
+    },
+    // S-Shape (Green)
+    {
+        {{0,0,0,0}, {0,1,1,0}, {1,1,0,0}, {0,0,0,0}},
+        {{0,0,0,0}, {0,1,0,0}, {0,1,1,0}, {0,0,1,0}},
+        {{0,0,0,0}, {0,0,0,0}, {0,1,1,0}, {1,1,0,0}},
+        {{0,0,0,0}, {1,0,0,0}, {1,1,0,0}, {0,1,0,0}}
+    },
+    // Z-Shape (Red)
+    {
+        {{0,0,0,0}, {1,1,0,0}, {0,1,1,0}, {0,0,0,0}},
+        {{0,0,0,0}, {0,0,1,0}, {0,1,1,0}, {0,1,0,0}},
+        {{0,0,0,0}, {0,0,0,0}, {1,1,0,0}, {0,1,1,0}},
+        {{0,0,0,0}, {0,1,0,0}, {1,1,0,0}, {1,0,0,0}}
+    },
+    // J-Shape (Blue)
+    {
+        {{0,0,0,0}, {1,0,0,0}, {1,1,1,0}, {0,0,0,0}},
+        {{0,0,0,0}, {0,1,1,0}, {0,1,0,0}, {0,1,0,0}},
+        {{0,0,0,0}, {0,0,0,0}, {1,1,1,0}, {0,0,1,0}},
+        {{0,0,0,0}, {0,1,0,0}, {0,1,0,0}, {1,1,0,0}}
+    },
+    // L-Shape (Orange)
+    {
+        {{0,0,0,0}, {0,0,1,0}, {1,1,1,0}, {0,0,0,0}},
+        {{0,0,0,0}, {0,1,0,0}, {0,1,0,0}, {0,1,1,0}},
+        {{0,0,0,0}, {0,0,0,0}, {1,1,1,0}, {1,0,0,0}},
+        {{0,0,0,0}, {1,1,0,0}, {0,1,0,0}, {0,1,0,0}}
     }
-#endif
-
-enum class TetrominoType { I, O, T, S, Z, J, L, NONE };
-
-struct Point {
-    int x, y;
 };
 
-class Tetromino {
-public:
-    TetrominoType type;
-    vector<Point> blocks;
-    int rotation;
+// Block characters for drawing the game (fallback if colors don't work)
+const char BLOCK_CHARS[2] = {' ', '#'};
 
-    Tetromino(TetrominoType type);
-    void rotate();
-    void move(int dx, int dy);
-    vector<Point> getRotatedShape() const;
-    vector<Point> getMovedShape(int dx, int dy) const;
-    string getColorCode() const;
-
+// Class for handling console display
+class ConsoleHandler {
 private:
-    static const vector<vector<Point>> baseShapes;
-};
+    HANDLE hConsole;
+    COORD cursorPosition;
+    bool colorSupported;
 
-const vector<vector<Point>> Tetromino::baseShapes = {
-    {{ {0, 0}, {1, 0}, {2, 0}, {3, 0} }}, // I
-    {{ {0, 0}, {1, 0}, {0, 1}, {1, 1} }}, // O
-    {{ {0, 0}, {1, 0}, {2, 0}, {1, 1} }}, // T
-    {{ {1, 0}, {2, 0}, {0, 1}, {1, 1} }}, // S
-    {{ {0, 0}, {1, 0}, {1, 1}, {2, 1} }}, // Z
-    {{ {0, 0}, {0, 1}, {1, 1}, {2, 1} }}, // J
-    {{ {2, 0}, {0, 1}, {1, 1}, {2, 1} }}  // L
-};
-
-Tetromino::Tetromino(TetrominoType type) : type(type), rotation(0) {
-    if (type != TetrominoType::NONE) {
-        blocks = baseShapes[(int)type];
-    }
-}
-
-void Tetromino::rotate() {
-    vector<Point> rotatedBlocks;
-    for (const auto& block : blocks) {
-        rotatedBlocks.push_back({ -block.y, block.x }); // 90-degree rotation formula
-    }
-    blocks = rotatedBlocks;
-}
-
-void Tetromino::move(int dx, int dy) {
-    for (auto& block : blocks) {
-        block.x += dx;
-        block.y += dy;
-    }
-}
-
-vector<Point> Tetromino::getMovedShape(int dx, int dy) const {
-    vector<Point> movedBlocks;
-    for (const auto& block : blocks) {
-        movedBlocks.push_back({ block.x + dx, block.y + dy });
-    }
-    return movedBlocks;
-}
-
-class TetrisGame {
 public:
-    TetrisGame();
-    void run();
-private:
-    vector<vector<char>> grid;
-    Tetromino currentPiece;
-    int score, level, linesCleared;
-    float fallSpeed;
-    bool gameOver, paused;
-
-    void initializeGame();
-    void generateNewPiece();
-    void updateGrid();
-    void drawGrid();
-    void handleInput();
-    void movePieceLeft();
-    void movePieceRight();
-    void movePieceDown();
-    void hardDrop();
-    bool rotatePiece();
-    bool checkCollision(const std::vector<Point>& blocks) const;
-    void clearLines();
-    void updateScore(int lines);
-    void updateLevel();
-    void checkGameOver();
-    void pauseGame();
-    TetrominoType getRandomPieceType();
-
-    static const int GRID_WIDTH = 10;
-    static const int GRID_HEIGHT = 20;
-};
-
-TetrisGame::TetrisGame() 
-    : grid(GRID_HEIGHT, vector<char>(GRID_WIDTH, ' ')), 
-      score(0), level(1), linesCleared(0), fallSpeed(0.8f), gameOver(false), paused(false), 
-      currentPiece(Tetromino(TetrominoType::NONE)) {
-    initializeGame();
-}
-
-void TetrisGame::initializeGame() {
-    grid.assign(GRID_HEIGHT, vector<char>(GRID_WIDTH, ' '));
-    generateNewPiece();
-}
-
-TetrominoType TetrisGame::getRandomPieceType() {
-    return static_cast<TetrominoType>(rand() % 7);
-}
-
-void TetrisGame::generateNewPiece() {
-    currentPiece = Tetromino(getRandomPieceType());
-    if (checkCollision(currentPiece.blocks)) {
-        gameOver = true;
+    ConsoleHandler() {
+        hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        hideCursor();
+        enableVirtualTerminalProcessing();
+        colorSupported = true;  // Assume color is supported initially
     }
-}
 
-bool TetrisGame::checkCollision(const vector<Point>& blocks) const {
-    for (const auto& block : blocks) {
-        if (block.x < 0 || block.x >= GRID_WIDTH || block.y >= GRID_HEIGHT) {
-            return true;
-        }
-        if (grid[block.y][block.x] != ' ') {
-            return true;
-        }
+    void hideCursor() {
+        CONSOLE_CURSOR_INFO cursorInfo;
+        cursorInfo.dwSize = 100;
+        cursorInfo.bVisible = FALSE;
+        SetConsoleCursorInfo(hConsole, &cursorInfo);
     }
-    return false;
-}
 
-void TetrisGame::run() {
-    cout << "Press any key to start...\n";
-    getch();
-
-    while (!gameOver) {
-        handleInput();
-        updateGrid();
-        drawGrid();
-        #ifdef _WIN32
-            Sleep(50);
-        #else
-            usleep(50000);
+    void enableVirtualTerminalProcessing() {
+        // Define ENABLE_VIRTUAL_TERMINAL_PROCESSING if not already defined
+        #ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+        #define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
         #endif
+        
+        // Enable ANSI escape sequences on Windows 10+
+        DWORD mode = 0;
+        GetConsoleMode(hConsole, &mode);
+        SetConsoleMode(hConsole, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
     }
 
-    cout << "Game Over! Score: " << score << endl;
-}
+    void setCursorPosition(int x, int y) {
+        cursorPosition.X = static_cast<SHORT>(x);
+        cursorPosition.Y = static_cast<SHORT>(y);
+        SetConsoleCursorPosition(hConsole, cursorPosition);
+    }
 
-void TetrisGame::drawGrid() {
-    system(CLEAR_SCREEN);
-    cout << "Score: " << score << " Level: " << level << "\n";
-    for (const auto& row : grid) {
-        cout << "|";
-        for (char cell : row) {
-            cout << (cell == '#' ? "[]" : "  ");
+    void clearScreen() {
+        system("cls");
+    }
+
+    // Draw a colored block at current position
+    void drawColorBlock(int colorIndex) {
+        if (colorSupported) {
+            // Set appropriate color based on tetromino type
+            switch (colorIndex) {
+                case 0: cout << "  "; break;                    // Empty
+                case 1: cout << "\033[46m  \033[0m"; break;     // Cyan (I)
+                case 2: cout << "\033[43m  \033[0m"; break;     // Yellow (O)
+                case 3: cout << "\033[45m  \033[0m"; break;     // Purple (T)
+                case 4: cout << "\033[42m  \033[0m"; break;     // Green (S)
+                case 5: cout << "\033[41m  \033[0m"; break;     // Red (Z)
+                case 6: cout << "\033[44m  \033[0m"; break;     // Blue (J)
+                case 7: cout << "\033[43;1m  \033[0m"; break;   // Orange (L)
+                default: cout << "  "; break;
+            }
+        } else {
+            // Fallback to character-based rendering if colors not supported
+            cout << BLOCK_CHARS[colorIndex == 0 ? 0 : 1] << BLOCK_CHARS[colorIndex == 0 ? 0 : 1];
         }
-        cout << "|\n";
     }
-}
+};
 
+// Class representing a Tetromino piece
+class Tetromino {
+private:
+    int type;       // Shape type (0-6)
+    int rotation;   // Current rotation (0-3)
+    int x, y;       // Position on grid
+
+public:
+    Tetromino(int t) : type(t), rotation(0), x(GRID_WIDTH / 2 - 2), y(0) {}
+    
+    // Copy constructor
+    Tetromino(const Tetromino& other) : type(other.type), rotation(other.rotation), x(other.x), y(other.y) {}
+
+    int getType() const { return type; }
+    int getRotation() const { return rotation; }
+    int getX() const { return x; }
+    int getY() const { return y; }
+
+    void rotate() { rotation = (rotation + 1) % 4; }
+    void moveLeft() { x--; }
+    void moveRight() { x++; }
+    void moveDown() { y++; }
+    
+    // Set position directly
+    void setPosition(int newX, int newY) {
+        x = newX;
+        y = newY;
+    }
+    
+    // Set rotation directly
+    void setRotation(int newRotation) {
+        rotation = newRotation % 4;
+    }
+
+    // Check if a specific cell of the tetromino is filled
+    bool isFilled(int cellX, int cellY) const {
+        // Convert board coordinates to shape coordinates
+        int shapeX = cellX - x;
+        int shapeY = cellY - y;
+
+        // Check if the coordinates are within shape bounds
+        if (shapeX >= 0 && shapeX < 4 && shapeY >= 0 && shapeY < 4) {
+            return SHAPES[type][rotation][shapeY][shapeX] == 1;
+        }
+        return false;
+    }
+};
+
+// The main Tetris game class
+class TetrisGame {
+private:
+    ConsoleHandler console;
+    vector<vector<int>> grid;   // Game grid (0=empty, 1-7=filled with tetromino type)
+    Tetromino* currentPiece;
+    Tetromino* nextPiece;
+    bool gameOver;
+    int score;
+    int level;
+    int linesCleared;
+    int speed;  // Frames per gravity drop
+    int lastSpeedUpdateLines;
+
+    // Initialize a new random tetromino
+    Tetromino* getRandomTetromino() {
+        int randomType = rand() % 7;
+        return new Tetromino(randomType);
+    }
+
+    // Check if the current piece can move to a new position
+    bool canMove(int newX, int newY, int newRotation) {
+        // Create a temporary tetromino to test the move
+        Tetromino temp(*currentPiece);
+        temp.setPosition(newX, newY);
+        temp.setRotation(newRotation);
+        
+        // Check if the new position is valid
+        for (int y = 0; y < 4; y++) {
+            for (int x = 0; x < 4; x++) {
+                if (SHAPES[temp.getType()][temp.getRotation()][y][x]) {
+                    int gridX = temp.getX() + x;
+                    int gridY = temp.getY() + y;
+
+                    // Out of bounds check
+                    if (gridX < 0 || gridX >= GRID_WIDTH || gridY >= GRID_HEIGHT) {
+                        return false;
+                    }
+
+                    // Collision with placed pieces (but only check cells that are within the grid)
+                    if (gridY >= 0 && grid[gridY][gridX] != 0) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    // Lock the current piece in place
+    void lockPiece() {
+        for (int y = 0; y < 4; y++) {
+            for (int x = 0; x < 4; x++) {
+                if (SHAPES[currentPiece->getType()][currentPiece->getRotation()][y][x]) {
+                    int gridX = currentPiece->getX() + x;
+                    int gridY = currentPiece->getY() + y;
+                    
+                    if (gridY >= 0 && gridY < GRID_HEIGHT && gridX >= 0 && gridX < GRID_WIDTH) {
+                        grid[gridY][gridX] = currentPiece->getType() + 1; // +1 because 0 is empty
+                    }
+                }
+            }
+        }
+    }
+
+    // Check for and clear full lines
+    void clearLines() {
+        int lines = 0;
+        
+        for (int y = 0; y < GRID_HEIGHT; y++) {
+            bool lineFull = true;
+            
+            // Check if the line is full
+            for (int x = 0; x < GRID_WIDTH; x++) {
+                if (grid[y][x] == 0) {
+                    lineFull = false;
+                    break;
+                }
+            }
+            
+            // If the line is full, clear it and move everything down
+            if (lineFull) {
+                lines++;
+                
+                // Move all lines above down
+                for (int moveY = y; moveY > 0; moveY--) {
+                    for (int x = 0; x < GRID_WIDTH; x++) {
+                        grid[moveY][x] = grid[moveY - 1][x];
+                    }
+                }
+                
+                // Clear the top line
+                for (int x = 0; x < GRID_WIDTH; x++) {
+                    grid[0][x] = 0;
+                }
+                
+                // Stay on the same line as it now contains what was previously above
+                y--;
+            }
+        }
+        
+        // Update score and level based on lines cleared
+        if (lines > 0) {
+            // Classic Tetris scoring
+            switch (lines) {
+                case 1: score += 40 * (level + 1); break;
+                case 2: score += 100 * (level + 1); break;
+                case 3: score += 300 * (level + 1); break;
+                case 4: score += 1200 * (level + 1); break;
+            }
+            
+            linesCleared += lines;
+            
+            // Update level (every 10 lines)
+            int newLevel = linesCleared / 10;
+            if (newLevel > level){
+                level = newLevel;
+                updateSpeed();
+            }
+        }
+    }
+
+    // Update speed based on level and lines cleared
+    void updateSpeed(){
+        // base speed formula: starts at 30 frames per drop at level 0
+        // and gradually decreases to a minimun of 5 frames per drop
+        speed = 30 - (level * 1.5);
+        if (speed < 5) speed = 5;
+        if (linesCleared > 50) speed -= 1;
+        if (linesCleared > 100) speed -= 1;
+        if (speed<3) speed = 3; //ensures we don't go below absolute minimum
+    }
+
+    // Check for game over condition
+    void checkGameOver() {
+        // Game is over if any placed blocks are in the top row
+        for (int x = 0; x < GRID_WIDTH; x++) {
+            if (grid[0][x] != 0) {
+                gameOver = true;
+                return;
+            }
+        }
+        
+        // Also check if the new piece can be placed
+        if (!canMove(currentPiece->getX(), currentPiece->getY(), currentPiece->getRotation())) {
+            gameOver = true;
+        }
+    }
+
+    // Draw the game board and UI
+    void draw() {
+        console.setCursorPosition(0, 0);
+
+        // Draw top border
+        cout << "+";
+        for (int x = 0; x < GRID_WIDTH * 2; x++) cout << "-";
+        cout << "+";
+
+        // Draw game information
+        console.setCursorPosition(GRID_WIDTH * 2 + 3, 0);
+        console.setCursorPosition(GRID_WIDTH * 2 + 3, 0);
+        cout << "TETRIS";
+        console.setCursorPosition(GRID_WIDTH * 2 + 3, 2);
+        cout << "Score: " << score;
+        console.setCursorPosition(GRID_WIDTH * 2 + 3, 3);
+        cout << "Level: " << level;
+        console.setCursorPosition(GRID_WIDTH * 2 + 3, 4);
+        cout << "Lines: " << linesCleared;
+
+        // Draw next piece preview
+        console.setCursorPosition(GRID_WIDTH * 2 + 3, 6);
+        cout << "Next Piece:";
+        for (int y = 0; y < 4; y++) {
+            console.setCursorPosition(GRID_WIDTH * 2 + 3, 7 + y);
+            for (int x = 0; x < 4; x++) {
+                if (SHAPES[nextPiece->getType()][0][y][x]) {
+                    console.drawColorBlock(nextPiece->getType() + 1);
+                } else {
+                    cout << "  ";
+                }
+            }
+        }
+
+        // Draw controls
+        console.setCursorPosition(GRID_WIDTH * 2 + 3, 12);
+        cout << "Controls:";
+        console.setCursorPosition(GRID_WIDTH * 2 + 3, 13);
+        cout << "← → : Move";
+        console.setCursorPosition(GRID_WIDTH * 2 + 3, 14);
+        cout << "↑   : Rotate";
+        console.setCursorPosition(GRID_WIDTH * 2 + 3, 15);
+        cout << "↓   : Soft Drop";
+        console.setCursorPosition(GRID_WIDTH * 2 + 3, 16);
+        cout << "Space: Hard Drop";
+        console.setCursorPosition(GRID_WIDTH * 2 + 3, 17);
+        cout << "ESC  : Quit";
+
+        // Draw grid
+        for (int y = 0; y < GRID_HEIGHT; y++) {
+            console.setCursorPosition(0, y + 1);
+            cout << "|";
+            
+            for (int x = 0; x < GRID_WIDTH; x++) {
+                if (grid[y][x] != 0) {
+                    // Draw locked pieces
+                    console.drawColorBlock(grid[y][x]);
+                } else if (currentPiece->isFilled(x, y)) {
+                    // Draw current piece
+                    console.drawColorBlock(currentPiece->getType() + 1);
+                } else {
+                    // Draw empty space
+                    console.drawColorBlock(0);
+                }
+            }
+            
+            cout << "|";
+        }
+
+        // Draw bottom border
+        console.setCursorPosition(0, GRID_HEIGHT + 1);
+        cout << "+";
+        for (int x = 0; x < GRID_WIDTH * 2; x++) cout << "-";
+        cout << "+";
+
+        // Game over screen
+        if (gameOver) {
+            console.setCursorPosition(GRID_WIDTH - 8, GRID_HEIGHT / 2);
+            cout << "=== GAME OVER ===";
+            console.setCursorPosition(GRID_WIDTH - 12, GRID_HEIGHT / 2 + 1);
+            cout << "Press any key to restart...";
+        }
+    }
+
+    // Perform a hard drop (moves the piece down as far as it can go)
+    void hardDrop() {
+        while (canMove(currentPiece->getX(), currentPiece->getY() + 1, currentPiece->getRotation())) {
+            currentPiece->moveDown();
+            score += 2; // Extra points for hard drop
+        }
+        lockPiece();
+        spawnNewPiece();
+        clearLines();
+        checkGameOver();
+    }
+
+    // Spawn a new tetromino piece
+    void spawnNewPiece() {
+        delete currentPiece;
+        currentPiece = nextPiece;
+        nextPiece = getRandomTetromino();
+    }
+
+    // Apply gravity to the current piece
+    void applyGravity() {
+        if (canMove(currentPiece->getX(), currentPiece->getY() + 1, currentPiece->getRotation())) {
+            currentPiece->moveDown();
+        } else {
+            lockPiece();
+            spawnNewPiece();
+            clearLines();
+            checkGameOver();
+        }
+    }
+
+public:
+    TetrisGame() : gameOver(false), score(0), level(0), linesCleared(0), speed(30), lastSpeedUpdateLines(0) {
+        // Initialize grid
+        grid.resize(GRID_HEIGHT, vector<int>(GRID_WIDTH, 0));
+        
+        // Initialize pieces
+        currentPiece = getRandomTetromino();
+        nextPiece = getRandomTetromino();
+        
+        // Seed random generator
+        srand(static_cast<unsigned int>(time(nullptr)));
+    }
+
+    ~TetrisGame() {
+        delete currentPiece;
+        delete nextPiece;
+    }
+
+    // Reset the game to initial state
+    void reset() {
+        // Clear grid
+        for (int y = 0; y < GRID_HEIGHT; y++) {
+            for (int x = 0; x < GRID_WIDTH; x++) {
+                grid[y][x] = 0;
+            }
+        }
+        
+        // Reset game state
+        delete currentPiece;
+        delete nextPiece;
+        currentPiece = getRandomTetromino();
+        nextPiece = getRandomTetromino();
+        gameOver = false;
+        score = 0;
+        level = 0;
+        linesCleared = 0;
+        speed = 30;
+        lastSpeedUpdateLines = 0;
+    }
+
+    // Show game instructions and wait for key press
+    void showIntro() {
+        console.clearScreen();
+        console.setCursorPosition(5, 5);
+        cout << "===== TETRIS =====";
+        console.setCursorPosition(5, 7);
+        cout << "Controls:";
+        console.setCursorPosition(5, 8);
+        cout << "Left/Right Arrow: Move tetromino";
+        console.setCursorPosition(5, 9);
+        cout << "Up Arrow: Rotate tetromino";
+        console.setCursorPosition(5, 10);
+        cout << "Down Arrow: Soft drop";
+        console.setCursorPosition(5, 11);
+        cout << "Spacebar: Hard drop";
+        console.setCursorPosition(5, 12);
+        cout << "ESC: Quit game";
+        console.setCursorPosition(5, 14);
+        cout << "Press any key to start...";
+        
+        // Wait for key press
+        _getch();
+        console.clearScreen();
+    }
+
+    // Main game loop
+    void run() {
+        int frameCount = 0;
+        bool keepRunning = true;
+        //int lastSpeedUpdateLines = 0;
+
+        showIntro();
+
+        while (keepRunning) {
+            // Process input
+            if (_kbhit()) {
+                int key = _getch();
+                
+                // Handle arrow keys (which return 224 followed by direction code)
+                if (key == 224) {
+                    key = _getch();
+                    
+                    if (gameOver) {
+                        reset();
+                    } else {
+                        switch (key) {
+                            case 75: // Left arrow
+                                if (canMove(currentPiece->getX() - 1, currentPiece->getY(), currentPiece->getRotation())) {
+                                    currentPiece->moveLeft();
+                                }
+                                break;
+                            case 77: // Right arrow
+                                if (canMove(currentPiece->getX() + 1, currentPiece->getY(), currentPiece->getRotation())) {
+                                    currentPiece->moveRight();
+                                }
+                                break;
+                            case 72: // Up arrow
+                                if (canMove(currentPiece->getX(), currentPiece->getY(), (currentPiece->getRotation() + 1) % 4)) {
+                                    currentPiece->rotate();
+                                }
+                                break;
+                            case 80: // Down arrow
+                                if (canMove(currentPiece->getX(), currentPiece->getY() + 1, currentPiece->getRotation())) {
+                                    currentPiece->moveDown();
+                                    score++; // Small bonus for soft drop
+                                }
+                                break;
+                        }
+                    }
+                } else {
+                    // Handle regular keys
+                    if (gameOver) {
+                        reset();
+                    } else {
+                        switch (key) {
+                            case 27: // ESC
+                                keepRunning = false;
+                                break;
+                            case 32: // Spacebar
+                                hardDrop();
+                                break;
+                        }
+                    }
+                }
+            }
+
+            // Apply gravity (drop every 'speed' frames)
+            if (!gameOver && ++frameCount >= speed) {
+                frameCount = 0;
+                applyGravity();
+            }
+
+            if (!gameOver && linesCleared - lastSpeedUpdateLines >= 20){
+                lastSpeedUpdateLines = linesCleared - (linesCleared % 20);
+                if (speed > 6) speed -= 0.5;
+            }
+
+            // Render the game
+            draw();
+            
+            // Control game speed
+            Sleep(16); // ~60 FPS
+        }
+    } 
+};
+
+// Entry point
 int main() {
-    srand(static_cast<unsigned>(time(nullptr)));
+    // Set console title
+    SetConsoleTitleW(L"Tetris Game");
+    
+    // Create and run the game
     TetrisGame game;
     game.run();
+
     return 0;
 }
