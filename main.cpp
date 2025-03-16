@@ -408,10 +408,25 @@ private:
 
         // Game over screen
         if (gameOver) {
+            for (int y = GRID_HEIGHT / 2 - 2; y <= GRID_HEIGHT / 2 + 3; y++){
+                console.setCursorPosition(GRID_WIDTH - 14, y);
+                for (int x = 0; x < 28; x++){
+                    if (y == GRID_HEIGHT / 2 - 2 || y == GRID_HEIGHT / 2 + 3){
+                        cout<< "=";
+                    } else if (x == 0 || x == 27){
+                        cout<< "|";
+                    } else {
+                        cout << " ";
+                    }
+                }
+            }
+            // Display the game over text
             console.setCursorPosition(GRID_WIDTH - 8, GRID_HEIGHT / 2);
-            cout << "=== GAME OVER ===";
+            cout << "GAME OVER";
             console.setCursorPosition(GRID_WIDTH - 12, GRID_HEIGHT / 2 + 1);
-            cout << "Press any key to restart...";
+            cout << "FInal Score: " << score;
+            console.setCursorPosition(GRID_WIDTH - 12, GRID_HEIGHT / 2 + 2);
+            cout << "Press any key to restart";
         }
     }
 
