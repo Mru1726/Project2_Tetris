@@ -25,17 +25,17 @@ A console-based Tetris Game with customizable settings. The game includes all th
 
 1. **Clone the Repository:**
    ```sh
-   git clone https://github.com/yourusername/snake-game.git
-   cd snake-game
+   git clone https://github.com/yourusername/tetris-game.git
+   cd tetris-game
    ```
 
 2. **Compile the Code:**
    ```sh
-   g++ snake_game.cpp -o snake_game
+   g++ tetris_game.cpp -o tetris_game
    ```
 3. **Run the Game:**
    ```sh
-   ./snake_game
+   ./tetris_game
    ```
 
 ## Requirements
