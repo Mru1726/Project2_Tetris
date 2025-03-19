@@ -77,8 +77,8 @@ Feel free to contribute by adding new features like :
     -Multiplayer Mode: Implement competitive or cooperative gameplay.
 
 ### Contributors
--> Mrunali Parmar - 202401122
--> Manya Rana - 202401115
+- Mrunali Parmar - 202401122
+- Manya Rana - 202401115
 
 ---
 
