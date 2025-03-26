@@ -46,14 +46,19 @@ A console-based Tetris Game with customizable settings. The game includes all th
 ## How to Play
 
 1.Start the game and a random tetromino appears at the top of the 10x20 grid.
+
 2.The player moves and rotates the piece to fit within the grid.
+
 3.When a horizontal row is completely filled, it is cleared, and the above rows shift down.
+
 4.The score increases based on the number of lines cleared at once:
     1 line: 40 points × (current level + 1)
     2 lines: 100 points × (current level + 1)
     3 lines: 300 points × (current level + 1)
     4 lines (Tetris): 1200 points × (current level + 1)
+    
 5.The game speeds up as the player progresses, making it more challenging.
+
 6.The game ends when the pieces stack to the top of the grid.
 
 
