@@ -180,6 +180,32 @@ public:
         }
         return false;
     }
+
+    // Method for the ghost piece preview
+    int findGhostDropY(const vector<vector<int>>& grid) const {
+        int ghostY = y;
+        while (true){
+            bool canDrop = true;
+            // Check if the piece can drop to the next row
+            for (int i=0; i<4; i++){
+                for (int j=0; j<4; j++){
+                    if (SHAPES[type][rotation][i][j]){
+                        int gridX = x + j;
+                        int gridY = ghostY + i + 1;
+                        // check grid boundaries and collisions
+                        if (gridY >= GRID_HEIGHT ||(gridX >= 0 && gridX < GRID_WIDTH && gridY >= 0 && grid[gridY][gridX] != 0)){
+                            canDrop = false;
+                            break;
+                        } 
+                    }
+                }
+                if (!canDrop) break;
+            }
+            if (!canDrop) break;
+            ghostY++;
+        }
+        return ghostY-1; //Return the last valid Y position
+    }
 };
 
 // The main Tetris game class
@@ -189,12 +215,14 @@ private:
     vector<vector<int>> grid;   // Game grid (0=empty, 1-7=filled with tetromino type)
     Tetromino* currentPiece;
     Tetromino* nextPiece;
+    Tetromino* heldPiece; // for hold piece functionality
     bool gameOver;
     int score;
     int level;
     int linesCleared;
     int speed;  // Frames per gravity drop
     int lastSpeedUpdateLines;
+    bool canHold; // prevent multiple holds per piece
 
     // Initialize a new random tetromino
     Tetromino* getRandomTetromino() {
@@ -262,7 +290,7 @@ private:
                 }
             }
             
-            // If the line is full, clear it and move everything down
+            // If the line is full, mark for clearing
             if (lineFull) {
                 lines++;
                 
@@ -303,6 +331,26 @@ private:
             }
         }
     }
+
+    // New method for hold piece functionality
+    void holdPiece(){
+        if (!canHold) return;
+        if (heldPiece == nullptr){
+            // first time holding. just swap with next piece
+            heldPiece = new Tetromino(*currentPiece);
+            spawnNewPiece();
+        } else {
+            // swap current piece with held piece
+            Tetromino* temp = currentPiece;
+            currentPiece = new Tetromino(*heldPiece);
+            delete heldPiece;
+            heldPiece = temp;
+
+            // Reset piece position
+            currentPiece->setPosition(GRID_WIDTH / 2 - 2, 0);
+        }
+        canHold = false;
+    }    
 
     // Update speed based on level and lines cleared
     void updateSpeed(){
@@ -424,9 +472,40 @@ private:
             console.setCursorPosition(GRID_WIDTH - 8, GRID_HEIGHT / 2);
             cout << "GAME OVER";
             console.setCursorPosition(GRID_WIDTH - 12, GRID_HEIGHT / 2 + 1);
-            cout << "FInal Score: " << score;
+            cout << "Final Score: " << score;
             console.setCursorPosition(GRID_WIDTH - 12, GRID_HEIGHT / 2 + 2);
             cout << "Press any key to restart";
+        }
+
+        // Draw ghost piece
+        int ghostY = currentPiece->findGhostDropY(grid);
+        for (int y=0; y<4; y++){
+            for (int x=0; x<4; x++){
+                if (SHAPES[currentPiece->getType()][currentPiece->getRotation()][y][x]){
+                    int gridX = currentPiece->getX() + x;
+                    int gridY = ghostY + y;
+                    // Only draw if within grid bounds and not already occupied
+                    if (gridY >= 0 && gridY < GRID_HEIGHT && gridX >= 0 && gridX < GRID_WIDTH && grid[gridY][gridX] == 0){
+                        console.setCursorPosition(1 + gridX * 2, gridY + 1);
+                        cout << "\033[90m--\033[0m"; // simple dashed line for grey ghost piece
+                    }
+                }
+            }
+        }
+        // Draw held piece preview
+        if (heldPiece){
+            console.setCursorPosition(GRID_WIDTH * 2 + 3, 20);
+            cout << "HEld Piece:";
+            for (int y=0; y<4; y++){
+                console.setCursorPosition(GRID_WIDTH * 2 + 3, 21 + y);
+                for (int x=0; x<4; x++){
+                    if (SHAPES[heldPiece->getType()][0][y][x]){
+                        console.drawColorBlock(heldPiece->getType()+1);
+                    } else{
+                        cout << " ";
+                    }
+                }
+            }
         }
     }
 
@@ -462,7 +541,7 @@ private:
     }
 
 public:
-    TetrisGame() : gameOver(false), score(0), level(0), linesCleared(0), speed(30), lastSpeedUpdateLines(0) {
+    TetrisGame() : gameOver(false), score(0), level(0), linesCleared(0), speed(30), lastSpeedUpdateLines(0), heldPiece(nullptr), canHold(true) {
         // Initialize grid
         grid.resize(GRID_HEIGHT, vector<int>(GRID_WIDTH, 0));
         
@@ -477,6 +556,7 @@ public:
     ~TetrisGame() {
         delete currentPiece;
         delete nextPiece;
+        if (heldPiece) delete heldPiece;
     }
 
     // Reset the game to initial state
@@ -499,6 +579,12 @@ public:
         linesCleared = 0;
         speed = 30;
         lastSpeedUpdateLines = 0;
+
+        if (heldPiece){
+            delete heldPiece;
+            heldPiece = nullptr;
+        }
+        canHold = true;
     }
 
     // Show game instructions and wait for key press
@@ -517,8 +603,10 @@ public:
         console.setCursorPosition(5, 11);
         cout << "Spacebar: Hard drop";
         console.setCursorPosition(5, 12);
+        cout << "'C': Hold tetromino";
+        console.setCursorPosition(5, 13);
         cout << "ESC: Quit game";
-        console.setCursorPosition(5, 14);
+        console.setCursorPosition(5, 15);
         cout << "Press any key to start...";
         
         // Wait for key press
@@ -547,6 +635,10 @@ public:
                         reset();
                     } else {
                         switch (key) {
+                            case 67: // 'C' key for holding piece
+                            case 99: // lowercase 'c'
+                                holdPiece();
+                                break;
                             case 75: // Left arrow
                                 if (canMove(currentPiece->getX() - 1, currentPiece->getY(), currentPiece->getRotation())) {
                                     currentPiece->moveLeft();
@@ -611,8 +703,6 @@ public:
 int main() {
     // Set console title
     SetConsoleTitleW(L"Tetris Game");
-    
-    // Create and run the game
     TetrisGame game;
     game.run();
 
