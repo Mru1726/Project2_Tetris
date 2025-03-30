@@ -223,7 +223,7 @@ private:
     int speed;  // Frames per gravity drop
     int lastSpeedUpdateLines;
     bool canHold; // prevent multiple holds per piece
-
+    
     // Initialize a new random tetromino
     Tetromino* getRandomTetromino() {
         int randomType = rand() % 7;
@@ -397,7 +397,7 @@ private:
         console.setCursorPosition(GRID_WIDTH * 2 + 3, 3);
         cout << "Level: " << level;
         console.setCursorPosition(GRID_WIDTH * 2 + 3, 4);
-        cout << "Lines: " << linesCleared;
+        cout << "Lines cleared: " << linesCleared;
 
         // Draw next piece preview
         console.setCursorPosition(GRID_WIDTH * 2 + 3, 6);
@@ -417,14 +417,16 @@ private:
         console.setCursorPosition(GRID_WIDTH * 2 + 3, 12);
         cout << "Controls:";
         console.setCursorPosition(GRID_WIDTH * 2 + 3, 13);
-        cout << "← → : Move";
+        cout << "Left/Right: Move";
         console.setCursorPosition(GRID_WIDTH * 2 + 3, 14);
-        cout << "↑   : Rotate";
+        cout << "Up: Rotate";
         console.setCursorPosition(GRID_WIDTH * 2 + 3, 15);
-        cout << "↓   : Soft Drop";
+        cout << "Down: Soft Drop";
         console.setCursorPosition(GRID_WIDTH * 2 + 3, 16);
         cout << "Space: Hard Drop";
         console.setCursorPosition(GRID_WIDTH * 2 + 3, 17);
+        cout << "h: Hold Piece";
+        console.setCursorPosition(GRID_WIDTH * 2 + 3, 18);
         cout << "ESC  : Quit";
 
         // Draw grid
@@ -495,7 +497,7 @@ private:
         // Draw held piece preview
         if (heldPiece){
             console.setCursorPosition(GRID_WIDTH * 2 + 3, 20);
-            cout << "HEld Piece:";
+            cout << "Held Piece:";
             for (int y=0; y<4; y++){
                 console.setCursorPosition(GRID_WIDTH * 2 + 3, 21 + y);
                 for (int x=0; x<4; x++){
@@ -509,7 +511,7 @@ private:
         }
     }
 
-    // Perform a hard drop (moves the piece down as far as it can go)
+    // Perform a hard drop
     void hardDrop() {
         while (canMove(currentPiece->getX(), currentPiece->getY() + 1, currentPiece->getRotation())) {
             currentPiece->moveDown();
@@ -526,6 +528,7 @@ private:
         delete currentPiece;
         currentPiece = nextPiece;
         nextPiece = getRandomTetromino();
+        canHold = true; // Allow holding again after spawning new piece
     }
 
     // Apply gravity to the current piece
@@ -603,7 +606,7 @@ public:
         console.setCursorPosition(5, 11);
         cout << "Spacebar: Hard drop";
         console.setCursorPosition(5, 12);
-        cout << "'C': Hold tetromino";
+        cout << "h: Hold tetromino";
         console.setCursorPosition(5, 13);
         cout << "ESC: Quit game";
         console.setCursorPosition(5, 15);
@@ -618,7 +621,6 @@ public:
     void run() {
         int frameCount = 0;
         bool keepRunning = true;
-        //int lastSpeedUpdateLines = 0;
 
         showIntro();
 
@@ -630,15 +632,10 @@ public:
                 // Handle arrow keys (which return 224 followed by direction code)
                 if (key == 224) {
                     key = _getch();
-                    
                     if (gameOver) {
                         reset();
                     } else {
                         switch (key) {
-                            case 67: // 'C' key for holding piece
-                            case 99: // lowercase 'c'
-                                holdPiece();
-                                break;
                             case 75: // Left arrow
                                 if (canMove(currentPiece->getX() - 1, currentPiece->getY(), currentPiece->getRotation())) {
                                     currentPiece->moveLeft();
@@ -674,6 +671,10 @@ public:
                             case 32: // Spacebar
                                 hardDrop();
                                 break;
+                            case 'h': // Hold Piece
+                            case 'H':
+                                holdPiece();
+                                break;
                         }
                     }
                 }
@@ -690,21 +691,15 @@ public:
                 if (speed > 6) speed -= 0.5;
             }
 
-            // Render the game
-            draw();
-            
-            // Control game speed
-            Sleep(16); // ~60 FPS
+            draw(); // Render the game
+            Sleep(16); // Control game speed ~60 FPS
         }
     } 
 };
 
-// Entry point
 int main() {
-    // Set console title
-    SetConsoleTitleW(L"Tetris Game");
+    SetConsoleTitleW(L"Tetris Game"); // Set console title
     TetrisGame game;
     game.run();
-
     return 0;
 }
