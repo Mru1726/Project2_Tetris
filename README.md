@@ -18,6 +18,7 @@ A console-based Tetris Game with customizable settings. The game includes all th
 - Up Arrow (↑): Rotate piece
 - Down Arrow (↓): Soft drop
 - Spacebar: Hard drop
+- h: Hold Piece
 - Escape (ESC): Pause or Quit
 
 
@@ -84,6 +85,8 @@ Feel free to contribute by adding new features like :
 ### Contributors
 - Mrunali Parmar - 202401122
 - Manya Rana - 202401115
+- Krisha Bhuva - 202401099
+- Krishna Parmar - 202401100
 
 ---
 
