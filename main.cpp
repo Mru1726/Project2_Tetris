@@ -382,6 +382,22 @@ private:
     // Draw the game board and UI
     void draw() {
         console.setCursorPosition(0, 0);
+        if (gameOver){
+            console.clearScreen(); // clear the screen for game over display
+            // Centre the game over text
+            int centerX = SCREEN_WIDTH / 2 - 5;
+            int centerY = SCREEN_HEIGHT / 2 - 2;
+            console.setCursorPosition(centerX, centerY);
+            cout << "GAME OVER !!";
+            console.setCursorPosition(centerX - 4, centerY + 1);
+            cout << "Final Score: " << score;
+            console.setCursorPosition(centerX - 8, centerY + 3);
+            cout << "Press any key to restart";
+            console.setCursorPosition(centerX - 8, centerY + 4);
+            cout << "Press ESC to quit";
+
+            return;
+        }
 
         // Draw top border
         cout << "+";
@@ -455,29 +471,6 @@ private:
         cout << "+";
         for (int x = 0; x < GRID_WIDTH * 2; x++) cout << "-";
         cout << "+";
-
-        // Game over screen
-        if (gameOver) {
-            for (int y = GRID_HEIGHT / 2 - 2; y <= GRID_HEIGHT / 2 + 3; y++){
-                console.setCursorPosition(GRID_WIDTH - 14, y);
-                for (int x = 0; x < 28; x++){
-                    if (y == GRID_HEIGHT / 2 - 2 || y == GRID_HEIGHT / 2 + 3){
-                        cout<< "=";
-                    } else if (x == 0 || x == 27){
-                        cout<< "|";
-                    } else {
-                        cout << " ";
-                    }
-                }
-            }
-            // Display the game over text
-            console.setCursorPosition(GRID_WIDTH - 8, GRID_HEIGHT / 2);
-            cout << "GAME OVER";
-            console.setCursorPosition(GRID_WIDTH - 12, GRID_HEIGHT / 2 + 1);
-            cout << "Final Score: " << score;
-            console.setCursorPosition(GRID_WIDTH - 12, GRID_HEIGHT / 2 + 2);
-            cout << "Press any key to restart";
-        }
 
         // Draw ghost piece
         int ghostY = currentPiece->findGhostDropY(grid);
@@ -629,53 +622,56 @@ public:
             if (_kbhit()) {
                 int key = _getch();
                 
+                if (gameOver){
+                    // Handle game over input
+                    if (key == 27) { // ESC
+                        keepRunning = false;
+                    } else {
+                        reset();
+                        console.clearScreen(); // clearing gameover screen after reset
+                    }
+                    while (_kbhit()) _getch();
+                    continue;
+                }
                 // Handle arrow keys (which return 224 followed by direction code)
                 if (key == 224) {
                     key = _getch();
-                    if (gameOver) {
-                        reset();
-                    } else {
-                        switch (key) {
-                            case 75: // Left arrow
-                                if (canMove(currentPiece->getX() - 1, currentPiece->getY(), currentPiece->getRotation())) {
-                                    currentPiece->moveLeft();
-                                }
-                                break;
-                            case 77: // Right arrow
-                                if (canMove(currentPiece->getX() + 1, currentPiece->getY(), currentPiece->getRotation())) {
-                                    currentPiece->moveRight();
-                                }
-                                break;
-                            case 72: // Up arrow
-                                if (canMove(currentPiece->getX(), currentPiece->getY(), (currentPiece->getRotation() + 1) % 4)) {
-                                    currentPiece->rotate();
-                                }
-                                break;
-                            case 80: // Down arrow
-                                if (canMove(currentPiece->getX(), currentPiece->getY() + 1, currentPiece->getRotation())) {
-                                    currentPiece->moveDown();
-                                    score++; // Small bonus for soft drop
-                                }
-                                break;
-                        }
+                    switch (key) {
+                        case 75: // Left arrow
+                            if (canMove(currentPiece->getX() - 1, currentPiece->getY(), currentPiece->getRotation())) {
+                                currentPiece->moveLeft();
+                            }
+                            break;
+                        case 77: // Right arrow
+                            if (canMove(currentPiece->getX() + 1, currentPiece->getY(), currentPiece->getRotation())) {
+                                currentPiece->moveRight();
+                            }
+                            break;
+                        case 72: // Up arrow
+                            if (canMove(currentPiece->getX(), currentPiece->getY(), (currentPiece->getRotation() + 1) % 4)) {
+                                currentPiece->rotate();
+                            }
+                            break;
+                        case 80: // Down arrow
+                            if (canMove(currentPiece->getX(), currentPiece->getY() + 1, currentPiece->getRotation())) {
+                                currentPiece->moveDown();
+                                score++; // Small bonus for soft drop
+                            }
+                            break;
                     }
                 } else {
                     // Handle regular keys
-                    if (gameOver) {
-                        reset();
-                    } else {
-                        switch (key) {
-                            case 27: // ESC
-                                keepRunning = false;
-                                break;
-                            case 32: // Spacebar
-                                hardDrop();
-                                break;
-                            case 'h': // Hold Piece
-                            case 'H':
-                                holdPiece();
-                                break;
-                        }
+                    switch (key) {
+                        case 27: // ESC
+                            keepRunning = false;
+                            break;
+                        case 32: // Spacebar
+                            hardDrop();
+                            break;
+                        case 'h': // Hold Piece
+                        case 'H':
+                            holdPiece();
+                            break;
                     }
                 }
             }
