@@ -381,21 +381,9 @@ private:
 
     // Draw the game board and UI
     void draw() {
-        console.setCursorPosition(0, 0);
+        console.setCursorPosition(0,0);
         if (gameOver){
-            console.clearScreen(); // clear the screen for game over display
-            // Centre the game over text
-            int centerX = SCREEN_WIDTH / 2 - 5;
-            int centerY = SCREEN_HEIGHT / 2 - 2;
-            console.setCursorPosition(centerX, centerY);
-            cout << "GAME OVER !!";
-            console.setCursorPosition(centerX - 4, centerY + 1);
-            cout << "Final Score: " << score;
-            console.setCursorPosition(centerX - 8, centerY + 3);
-            cout << "Press any key to restart";
-            console.setCursorPosition(centerX - 8, centerY + 4);
-            cout << "Press ESC to quit";
-
+            showGameOverScreen();
             return;
         }
 
@@ -583,7 +571,7 @@ public:
         canHold = true;
     }
 
-    // Show game instructions and wait for key press
+    // Show game instructions
     void showIntro() {
         console.clearScreen();
         console.setCursorPosition(5, 5);
@@ -610,6 +598,42 @@ public:
         console.clearScreen();
     }
 
+    void showGameOverScreen() {
+        console.clearScreen();
+        // Box dimensions
+        const int boxWidth = 30;
+        const int boxHeight = 8;
+        const int boxStartX = (SCREEN_WIDTH - boxWidth) / 2;
+        const int boxStartY = (SCREEN_HEIGHT - boxHeight) / 2;
+        // Draw top border
+        console.setCursorPosition(boxStartX, boxStartY);
+        cout << "+";
+        for (int x = 0; x < boxWidth - 2; x++) cout << "-";
+        cout << "+";
+        // Draw sides
+        for (int y = 1; y < boxHeight - 1; y++) {
+            console.setCursorPosition(boxStartX, boxStartY + y);
+            cout << "|";
+            console.setCursorPosition(boxStartX + boxWidth - 1, boxStartY + y);
+            cout << "|";
+        }
+        // Draw bottom border
+        console.setCursorPosition(boxStartX, boxStartY + boxHeight - 1);
+        cout << "+";
+        for (int x = 0; x < boxWidth - 2; x++) cout << "-";
+        cout << "+";
+        // Center text inside box
+        const int textOffsetY = 2;
+        console.setCursorPosition(boxStartX + (boxWidth - 8)/2, boxStartY + textOffsetY);
+        cout << "GAME OVER";
+        console.setCursorPosition(boxStartX + (boxWidth - 14)/2, boxStartY + textOffsetY + 1);
+        cout << "Final Score: " << score;
+        console.setCursorPosition(boxStartX + (boxWidth - 22)/2, boxStartY + textOffsetY + 3);
+        cout << "Press any key to restart";
+        console.setCursorPosition(boxStartX + (boxWidth - 16)/2, boxStartY + textOffsetY + 4);
+        cout << "Press ESC to quit";
+    }
+
     // Main game loop
     void run() {
         int frameCount = 0;
@@ -621,7 +645,6 @@ public:
             // Process input
             if (_kbhit()) {
                 int key = _getch();
-                
                 if (gameOver){
                     // Handle game over input
                     if (key == 27) { // ESC
@@ -663,7 +686,15 @@ public:
                     // Handle regular keys
                     switch (key) {
                         case 27: // ESC
-                            keepRunning = false;
+                            if (!gameOver){
+                                showGameOverScreen();
+                                int key = _getch();
+                                if (key == 27){
+                                    keepRunning = false;
+                                }
+                            } else {
+                                keepRunning = false;
+                            }
                             break;
                         case 32: // Spacebar
                             hardDrop();
@@ -681,12 +712,10 @@ public:
                 frameCount = 0;
                 applyGravity();
             }
-
             if (!gameOver && linesCleared - lastSpeedUpdateLines >= 20){
                 lastSpeedUpdateLines = linesCleared - (linesCleared % 20);
                 if (speed > 6) speed -= 0.5;
             }
-
             draw(); // Render the game
             Sleep(16); // Control game speed ~60 FPS
         }
@@ -694,7 +723,7 @@ public:
 };
 
 int main() {
-    SetConsoleTitleW(L"Tetris Game"); // Set console title
+    SetConsoleTitleW(L"Tetris Game");
     TetrisGame game;
     game.run();
     return 0;
