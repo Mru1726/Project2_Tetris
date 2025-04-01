@@ -11,6 +11,8 @@ A console-based Tetris Game with customizable settings. The game includes all th
 - **Collision Detection** Prevent blocks from overlapping or moving out of bounds.
 - **Line Clearing** Removes full rows and shifts the grid downwards.
 - **Scoring System** Award points for cleared lines.
+- **Hold Piece** Allow players to store a tetromino for later use.
+- **Ghost Piece** Show where the tetromino will land.
 
 ## Controls
 - Left Arrow (←): Move left
@@ -78,9 +80,11 @@ A console-based Tetris Game with customizable settings. The game includes all th
 ## Contributions
 
 Feel free to contribute by adding new features like :
-    -Hold Piece: Allow players to store a tetromino for later use.
-    -Ghost Piece: Show where the tetromino will land.
     -Multiplayer Mode: Implement competitive or cooperative gameplay.
+    -Lock Delay: Add a slight delay before a piece locks into place to allow last-second adjustments.
+    -Adaptive Difficulty: Dynamically adjust speed and complexity based on player skill.
+
+
 
 ### Contributors
 - Mrunali Parmar - 202401122
