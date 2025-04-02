@@ -77,6 +77,9 @@ A console-based Tetris Game with customizable settings. The game includes all th
 -  **Encapsulation:** Game elements like console display, tetromino piece, and the main game portion is encapsulated in classes.
 -  **Abstraction:** Hides complex game logic behind simple interfaces.
 
+## Demo Video
+   https://www.loom.com/share/a08b28fba10548e79bea76492d13ad93?sid=bf973764-fcab-4d69-8208-3672b145a4d3
+
 ## Contributions
 
 Feel free to contribute by adding new features like :
