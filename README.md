@@ -83,9 +83,9 @@ A console-based Tetris Game with customizable settings. The game includes all th
 ## Contributions
 
 Feel free to contribute by adding new features like :
-    -Multiplayer Mode: Implement competitive or cooperative gameplay.
-    -Lock Delay: Add a slight delay before a piece locks into place to allow last-second adjustments.
-    -Adaptive Difficulty: Dynamically adjust speed and complexity based on player skill.
+   - Multiplayer Mode: Implement competitive or cooperative gameplay.
+   - Lock Delay: Add a slight delay before a piece locks into place to allow last-second adjustments.
+   - Adaptive Difficulty: Dynamically adjust speed and complexity based on player skill.
 
 
 
