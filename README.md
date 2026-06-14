@@ -21,7 +21,7 @@ A console-based Tetris Game with customizable settings. The game includes all th
 - Down Arrow (↓): Soft drop
 - Spacebar: Hard drop
 - h: Hold Piece
-- Escape (ESC): Pause or Quit
+- Escape (ESC): Pause or Quit.
 
 
 ## Installation and Execution 
